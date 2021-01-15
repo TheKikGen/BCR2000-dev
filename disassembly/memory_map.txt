@@ -1,0 +1,50 @@
+Behringer Control Devices Memory Map
+------------------------------------
+
+(based on BCF2000; please let me know if details differ for the BCR2000)
+
+0000000-007ffff   non-volatile memory (flash)
+	0000000		reset vector
+	0000004		undefined instruction exception vector
+	0000008		software interrupt vector (not used)
+	000000c		prefetch abort exception vector (not used)
+	0000010		data abort exception vector (not used)
+	0000014		reserved
+	0000018		IRQ vector
+	000001c		FIQ vector (not used)
+	0000020-00001f7	pre-boot code
+	00001f8-0001fff	bootloader
+	0002000		obfuscated size of OS code
+	0002004		obfuscated checksum of OS code
+	0002008-003dfff	obfuscated OS code
+	0002aaa		flash register (see SST39SF040 datasheet)
+	0005555		flash register (see SST39SF040 datasheet)
+	003f038-003fff7	ringbuffer with current preset info, chunksize 0x37
+	0040000-007dfff	preset storage, 32 times 0x2000 (max. 8kB each)
+
+0200000-0200fff   4kB CPU-internal RAM
+
+0400000-05fffff   core bus I/O space
+	0400000-040000F	CPU control registers
+
+0600000-06fffff   peripheral bus I/O space
+	0600000-0600035	interrupt control registers
+	0600100-0600164	timer control registers
+	0600200-0600204	time base generator control registers
+	0600300-0600328	UART control registers
+	0600400-0600418	serial communications control registers
+	0600600-060063c	I/O port registers
+	0600700-0600738	external memory control registers
+	0600800-060084c	DMA control control registers
+	0600a00-0600b10	USB control registers
+
+2000000-21fffff   external DRAM
+	2000000		operating system entry point
+	2000004		operating system IRQ handler
+	2080000-2080047	copied in pre-boot code from 1904-194b
+	2080048-20869b3	cleared by pre-boot code, probably pre-allocated heap
+	2180000-218170c	bootloader copy
+	2180060   	bootloader entry point
+	21800fd   	bootloader IRQ handler
+
+

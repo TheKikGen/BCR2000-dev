@@ -1,0 +1,1608 @@
+: .___ disassembly annotation
+: .daversion 0.1
+0: .cs
+0: .cs ;
+0: .cs ; BCR2000 bootloader firmware disassembly
+0: .cs ;
+0: .cs ; version 2012.07.05
+0: .cs ;
+0: .cs ; Don't fear to take some things with a grain of salt. Analysis of a
+0: .cs ; disassembly often leads to false intermediate conclusions of which you
+0: .cs ; probably find some traces. Also the deobfuscation code here is probably
+0: .cs ; less punctual than what can be found in bcfwconvert.
+0: .cs ;
+0: .cs ; The most important thing right now is the interrupt handler. That's where
+0: .cs ; the interaction with the hardware happens. To understand what's happening,
+0: .cs ; though, it's useful to have a look at the memory addresses that are used
+0: .cs ; in routines like set_led, get_key, display and send midi.
+0: .cs ;
+0: .cs ; Please note that there are only minor differences between the bootloaders
+0: .cs ; of the BCF2000 and BCR2000. The main analysis was done on the BCF2000, so
+0: .cs ; that disassembly may be more accurate and complete.
+0: .cs ;
+0: .cs ; Have fun!
+0: .cs ;
+0: .cs 	; vector: reset
+4: .cs 	; vector: undefined instruction
+8: .cs 	; vector: software interrupt (apparently not used)
+c: .cs 	; vector: prefetch abort (apparently not used)
+10: .cs 	; vector: data abort (apparently not used)
+14: .cs 	; vector: reserved (apparently not used)
+18: .cs
+18: .cs 	; vector: IRQ (1c is FIQ vector but that's not used)
+18: .cl 	; correct return address wrt pipeline
+20: .cl 	; 0x48
+24: .cl 	; r0=*0x00600620 PM0 port mode register 0
+28: .cl 	; if not r0&0x8000
+2c: .cl 	; then call *0x4c (bootloader IRQ handler)
+30: .cl 	; else call *0x50 (OS IRQ handler)
+34: .cl 	; 0x54
+38: .cl 		; return to addres 0x40 in thumb mode
+40:        	.thumb
+42: .cl 			; jump to 0x44 in normal mode
+44:        	.arm
+44: .cl  ; pop+return
+48: .cs
+48: .word [1]
+4c: .cl 	; =0x9d in bootloader code here
+4c: .word [1]
+50: .word [1]
+54: .word [1]
+58: .word [1]
+5c: .cs
+5c: .cs
+5c: .cs 	;
+5c: .cs 	; SUBROUTINE: copy block from r0 to r1..r2 (incl)
+5c: .cs 	;
+70: .cs
+70: .cs 	;
+70: .cs 	; SUBROUTINE: zero-fill block r0..r1 (incl)
+70: .cs 	;
+84: .cs
+84: .cs 	;;
+84: .cs 	;; Entry point after reset
+84: .cs 	;;
+84: .cs 	;
+84: .cs 	; Prepares memory, copies bootloader to it and runs that from memory.
+84: .cs 	;
+84: .cl 	; 0xd2 -> IRQ mode, interrupts disabled
+88: .cl 	; sp=*0x1c4
+8c: .cl 	; 0xd3 -> supervisor mode, ints disabled
+90: .cl 	; sp=*0x1c8
+94: .cs
+94: .cs 	; initialize memory
+94: .cl 	; 0xa0;  r0=0x13c
+98: .cl  ; load three words at a time
+9c: .cl 	; 0x0
+a0: .cl               ; destination=0 -> done
+a4: .cl 	; 0x1
+ac: .cl 	; 0x2
+b4: .cl       ; cmd other: store byte
+bc: .cl       ; cmd 1: store halfword
+c4: .cl           ; cmd 2: store word
+cc: .cs 	; boot delay, not sure why
+cc: .cl 	; r0=*0x1cc
+d8: .cs 	; copy bootloader to memory
+d8: .cs 	; copy from *0x1d0 to *0x1d4 for *0x1d8 words
+d8: .cl 	; r0=*0x1d0
+dc: .cl 	; r1=*0x1d4
+e4: .cl 	; r4=*0x1d8
+e8: .cl       ; r2=r1+r4
+ec: .cl 			; copy block
+f0: .cs 	; erase at *0x1e0 for *0x1dc words
+f0: .cl 	; r2=*0x1dc
+f4: .cl 	; r0=*0x1e0
+fc: .cl       ; r1=r0+r2
+100: .cl             ; erase block
+104: .cs 	; copy from *0x1e4 to *0x1e8 for *0x1ec words
+104: .cl 	; 0x1e4
+108: .cl 	; 0x1e8
+110: .cl 	; 0x1ec
+118: .cl 			; copy block
+11c: .cs 	; erase at *0x1f4 for *0x1f0 words
+11c: .cl 	; 0x1f0
+120: .cl 	; 0x1f4
+130: .cs 	; and jump to bootloader
+130: .cl 	; 0x138
+134: .cl               ; jump to code in memory
+138: .cs
+138: .cs 	; start bootloader here (relative to *0x1d4)
+138: .cl 	; is actually 02180060 with thumb mode
+138: .word [1]
+13c: .cs
+13c: .cs 	; memory initialization table: clock & external memory settins
+13c: .cl 	; CKCON, ??
+13c: .word [3]
+148: .cl 	; CKCON set clock multiplier to max (f or f/2)
+148: .word [3]
+154: .cl 	; OTCON= 0x05
+154: .word [3]
+160: .cl 	; BWCON= 0x0c
+160: .word [3]
+16c: .cl 	; PWCON= 0x33
+16c: .word [3]
+178: .cl 	; DR2CON=0x09
+178: .word [3]
+184: .cl 	; AT2CON=0x00
+184: .word [3]
+190: .cl 	; DW2CON=0x01
+190: .word [3]
+19c: .cl 	; RCCON= 0xbc
+19c: .word [3]
+1a8: .cl 	; RTCON= 0x00
+1a8: .word [3]
+1b4: .cl 	; RFCON= 0x01
+1b4: .word [3]
+1c0: .word [1]
+1c4: .cs
+1c4: .cl 	; see entry point
+1c4: .word [1]
+1c8: .cl 	; see entry point
+1c8: .word [1]
+1cc: .cs
+1cc: .cs 	; boot delay, not sure why
+1cc: .word [1]
+1d0: .cs
+1d0: .cs 	; bootloader definition
+1d0: .cl 	; copy from
+1d0: .word [1]
+1d4: .cl 	; to
+1d4: .word [1]
+1d8: .cl 	; this many words
+1d8: .word [1]
+1dc: .cs
+1dc: .cl 	; and this many words
+1dc: .word [1]
+1e0: .cl 	; fill with zeroes here
+1e0: .word [1]
+1e4: .cs
+1e4: .cl 	; and copy from
+1e4: .word [1]
+1e8: .cl 	; to
+1e8: .word [1]
+1ec: .cl 	; this many words
+1ec: .word [1]
+1f0: .cs
+1f0: .cl 	; and this many words
+1f0: .word [1]
+1f4: .cl 	; fill with zeroes here
+1f4: .word [1]
+1f8: .cs
+1f8: .cs
+1f8: .cs 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+1f8: .cs 	;;
+1f8: .cs 	;; start of bootloader code that is copied to memory
+1f8: .cs 	;;
+1f8: .cs 	; disable interrupts
+1f8: .cl 	; 0xd3 -> supervisor mode, ints disabled
+1fc: .cl 		; return
+200: .cs 	; enable IRQ
+200: .cl 	; 0x53 -> supervisor mode, IRQ enabled
+204: .cl 		; return
+208: .cs
+208: .cl 
+208: .ascii [4c]
+0: .cs
+0: .cs 	;;
+0: .cs 	;; boot loader entry point
+0: .cs 	;;   note that the address is reset in the disassembly (-0x258 offset from previous)
+0: .cs 	;;   this piece of code is copied to ram and then executed from 0x2180060
+0: .cs 	;;   It would have been convenient to start here at address 0x60 but alas, one doesn't
+0: .cs 	;;   know everything beforehand.
+0: .cs 	;;
+0:        	.rebase 258
+0:        	.thumb
+0: .cs 	; clear P4O_1
+2: .cl 		; (*0x70=0x00600600)
+4: .cl 		; r1=*(r0+8) port output register 2
+c: .cs 	; set P4M_1 so that the bootloader's interrupt handler is used
+c: .cl 		; (*0x74=0x00600620)
+e: .cl 		; r1=*(r0+8) port mode register 2
+14: .cs
+14: .cl 	; clear some memory areas
+18: .cl 	; setup UART+SC+someIOports
+1c: .cs
+1e: .cl 		; (*0x78=0x06000100 timer control)
+20: .cl 	; TM0CON: auto reload timer mode, 16TBCCLK
+22: .cl 		; (*0x7c=0x0000fa24)
+24: .cl 	; set timer counter 0
+28: .cl 		; (*0x80=0x00600160 TMEN timer enable)
+2a: .cl 	; enable timer 0
+2c: .cl 		; (*0x84=0x00600020 ILCON0 int level control reg)
+2e: .cl 	; read ILCON2
+30: .cl 		; (*0x88=0x0000fff0)
+38: .cl 	; ILCON2 = (ILCON2&0xfff0)|4
+3a: .cs
+3a: .cl 		; clear some memory areas
+3e: .cl 		; enable IRQ
+46: .cl 	; *sp=1<<12=0x1000 ... is return address(!) = 2nd 4k section of flash
+48: .cl 		; (*0x8c=0x02080048)
+4a: .cl 	; 	; (*0x90 = 0x511 here, main bootloader routine)
+56: .cl 	; error unless r0==0
+58: .cl 	; (adr r0, 0x94 "E P1")
+5a: .cl 	; show on display
+60: .cl 	; infinite loop
+64: .cl 	; run OS ?
+68: .cs 	; I guess this is unreachable code as it jumps back to pre-boot stage
+6e: .cs
+6e: .short [1]
+70: .cs
+70: .word [1]
+74: .word [1]
+78: .cs
+78: .word [1]
+7c: .word [1]
+80: .word [1]
+84: .word [1]
+88: .word [1]
+8c: .word [1]
+90: .cl 	; =0x511 here = main bootloader routine
+90: .word [1]
+94: .cl 
+94: .ascii [4]
+98: .word [1]
+9c: .cs
+9c: .cs 	;
+9c: .cs 	; SUBROUTINE: IRQ handler when PM0&0x8000
+9c: .cs 	;
+a0: .cl 		; r7=3<<21=0x600000
+a2: .cl 	; r4=IRLR interrupt request level
+a4: .cl 	; r0=INR interrupt number
+a8: .cl 			; jump if irq1
+ac: .cl 			; jump if irq2
+b0: .cl 			; jump if not irq8
+b2: .cs 	; IRQ8 handler (timer0 overflow)
+b2: .cl 				; increment counter
+ba: .cl 	; 0xff
+bc: .cl 			; set ILCON0 to 0x100
+c0: .cs 	; IRQ1 handler (UART)
+c0: .cl 		; (*0xf0=0x00600300 UART)
+c2: .cl 	; r0=IIR interrupt id reg
+c4: .cl 			; r3=6
+c6: .cl 			; r0=IIR&6
+ca: .cl 			; jump unless data available or char timeout
+cc: .cl 				; handle: statusline changed or txbuf empty
+d2: .cl 				; handle: data available or char timeout
+d6: .cl 			; set ILCON0 to 2
+da: .cs 	; IRQ2 handler (SC baudrate)
+de: .cl 			; set ILCON0 to 8
+e0: .cs 	; common IRQ exit routine
+e0: .cl 	; ILCON0=r0
+e2: .cs 	; clear this interrupt so others are handled
+e6: .cl 	; CILR=1<<IRLR
+ee: .cs
+ee: .short [1]
+f0: .word [1]
+f4: .cs
+f4: .cs 	;
+f4: .cs 	; SUBROUTINE: compute sysex firmware command data checksum
+f4: .cs 	;	data at r0 length r1
+f4: .cs 	;
+f6: .cl 		; r3=0
+f8: .cl 	; r7=r1-1
+fc: .cl 		; if r1==0: return 0
+fe: .cs 	; outer loop
+fe: .cl ; r2=*r0 {byte}
+100: .cl 		; r1=0
+102: .cl 		; r0++
+104: .cs 	; inner loop
+108: .cl 	; r4=(r2^r3)>>1
+10a: .cl 		; if bit was 0:
+110: .cl 		;	r3=r3^0x19
+112: .cl 	; r4=r3>>1
+114: .cl 	; r3>>=1
+116: .cl 		; if bit was 1:
+118: .cl 	;	r3=0x80
+11a: .cl 		;	r4|=r3
+11c: .cl 	; r2>>=1
+11e: .cl 		; r1++
+120: .cl 	; r3=r4
+124: .cl 		; loop while r1<8
+126: .cs
+126: .cl 	; r1=r7
+128: .cl 		; r7--
+12c: .cl 		; loop until r7==0
+12e: .cs 	; return
+12e: .cl 	; r0=r3
+134: .cs
+134: .cs 	;
+134: .cs 	; SUBROUTINE: decode and decipher firmware from r0 to r2 dest length r1
+134: .cs 	;	converts 7-bit data to 8-bit firmware
+134: .cs 	;	and deciphers it using xor cipher
+134: .cs 	;	destination length r1 must be a multiple of seven
+134: .cs 	;
+134: .cs 	;	r4=r1; r7=r0
+134: .cs 	;	r1=0
+134: .cs 	;	r2=r7
+134: .cs 	;
+134: .cs 	;	for (; r4>0; r4-=7):
+134: .cs 	;		r5={byte}*(r7+7)
+134: .cs 	;		for (r0=0; r0<7; r0++):
+134: .cs 	;			r3=*(r7+r0) {byte}
+134: .cs 	;			if (r5>>7)&1: r3 |= 128
+134: .cs 	;			*(r2+r0) = r3 ^ (cipherptr+r1) {byte}
+134: .cs 	;			r1++
+134: .cs 	;			if r0>=13: r1=0
+134: .cs 	;			r5<<=1
+134: .cs 	;		r2+=7
+134: .cs 	;		r7+=8
+134: .cs 	;
+13c: .cl  ; =ptr to firmware cipher
+142: .cl 	; memcpy(r0,r1,r2)
+158: .cl 	; 0x80
+18c: .cs
+18c: .cl 	; =0x15f3 here, firmware cipher
+18c: .word [1]
+190: .cs
+190: .cs 	;
+190: .cs 	; SUBROUTINE: do a little more firmware upload deobfuscation
+190: .cs 	;	r0=data
+190: .cs 	;	r1=length
+190: .cs 	;	r2=offset
+190: .cs 	;
+192: .cl 		; (*0x1dc=0x0000545a) special magic for sector 0
+198: .cl 	; if r2!=0: r3=r2
+19a: .cl 	; r2=r3
+19c: .cl 	; r7=orig_r1-1
+1a0: .cl 		; return if orig_r1==0
+1a2: .cs 	; loop
+1a2: .cl 	; r1=r2>>1
+1a4: .cl 		;
+1a6: .cl 		; (*0x1e0=0x00008005)
+1a8: .cl 		; if bit was set: r2 ^= 0x8005
+1ac: .cl 	; r1=r2=r2>>1
+1b4: .cl 		; if bit was set: r1 |= 0x8000
+1bc: .cl ; *r0 ^= r2 {byte}
+1c4: .cl ; *(r0+1) ^= (r2>>8) {byte}
+1c6: .cl 		; r0+=2
+1cc: .cl 		; if r7!=0: r7--
+1ce: .cl 	; r1=r7
+1d0: .cl 		; r7--
+1d4: .cl 		; loop until r1==0
+1da: .cs
+1da: .short [1]
+1dc: .word [1]
+1e0: .word [1]
+1e4: .cs
+1e4: .cs 	;
+1e4: .cs 	; SUBROUTINE: decode firmware from r1 to r0 length r2 words
+1e4: .cs 	;	r3 is initial offset in both cipher key arrays
+1e4: .cs 	;
+1e6: .cl 		; make space on stack
+1e8: .cl 	; r4=r1
+1ea: .cl 	; r5=r0
+1ec: .cl 	; r6=r2
+1ee: .cl 	; r7=r3
+1f0: .cl 		; (*0x244 is 0x1604 here)
+1f2: .cl 		; r2=0x38
+1f4: .cl 		; r0=sp+60
+1f6: .cl 				; memcpy(sp+60, 0x1604, 0x38)
+1fa: .cl 		; (*0x248 is 0x163c here)
+1fc: .cl 			; r0=sp
+1fe: .cl 		; r2=0x3c
+200: .cl 				; memcpy(sp, 0x163c, 0x3c)
+204: .cl 	; r0=r7
+206: .cl 	; r1=r6-1
+20a: .cl 		; return if orig_r2==0
+20c: .cs 	;
+20c: .cs 	; r5=orig_r0
+20c: .cs 	; r1=orig_r2-1
+20c: .cs 	; r0=r7=r3
+20c: .cs 	; do {
+20c: .cs 	;	r3 = *(r4++)
+20c: .cs 	;   r3 ^= *(sp+60+r0*4)
+20c: .cs 	;   r2 = r3 ^ *(sp+r7*4)
+20c: .cs 	;   *(r5++) = r2
+20c: .cs 	;   r0 = (r0+1)%14
+20c: .cs 	;   r7 = (r7+1)%15
+20c: .cs 	; } until(r1--==0)
+20c: .cs 	;
+20c: .cl 	; r3=*(r4++)
+20e: .cl 	; r2=r0
+210: .cl 	; r6=r2*4
+212: .cl 		; r2=sp+60
+214: .cl 	; r2=*(r2+r6)
+216: .cl 		; r3^=r2      <=> r3 ^= *(sp+60+r0*4)
+218: .cl 	; r2=r7
+21a: .cl 	; r6=r2*4
+21c: .cl 			; r2=sp
+21e: .cl 	; r2=*(r2+r6)
+220: .cl 		; r2^=r3      <=> r2 = r3 ^ *(sp+r7*4)
+222: .cl 	; *(r5++)=r2
+224: .cl 		; r0++
+226: .cl 		; r7++
+22c: .cl 		; r0 always mod 14
+232: .cl 		; r7 always mod 15
+234: .cl 	; r2=r1
+236: .cl 		; r1--
+23a: .cl 		; loop until r2==0
+23c: .cs 	; return
+244: .cs
+244: .cl 	; =0x1604 here
+244: .word [1]
+248: .cl 	; =0x163c here
+248: .word [1]
+24c: .cs
+24c: .cs 	;
+24c: .cs 	; SUBROUTINE: decode firmware from flash to RAM and boot when successful
+24c: .cs 	;
+24e: .cs 	;
+24e: .cs 	; decode firmware to RAM
+24e: .cs 	;
+24e: .cs 	;	// decode length and checksum first
+24e: .cs 	;	decodefw(sram_start, 0x2000, 2, 0)
+24e: .cs 	;
+24e: .cs 	;	// get length of firmware in bytes as words
+24e: .cs 	;	r7 = ( *(sram_start+0) + 3 ) / 4
+24e: .cs 	;	// get checksum of decoded firmware
+24e: .cs 	;	r5 =   *(sram_start+4)
+24e: .cs 	;
+24e: .cs 	;	// make sure length is within bounds
+24e: .cs 	;	return if r7==0 or r7>0x7ffff
+24e: .cs 	;	return if (r7*4+0x2008) > 0x7ffff
+24e: .cs 	;
+24e: .cs 	;	// then copy whole firmware now length is known
+24e: .cs 	;	decodefw(sram_start, 0x2008, r7, 2)
+24e: .cs 	;
+250: .cl 	; r1=1<<13=0x2000
+256: .cl 	; r0=1<<25=0x2000000
+258: .cl 			; decodefw(0x2000000,0x2000,2,0)
+25e: .cl 	; r4=1<<25=0x2000000
+260: .cl 	; r0=*r4      offset?
+262: .cl 		; r0+=3
+264: .cl 	; r7=r0>>2  <=>  r7=(*0x2000000+3)>>2
+266: .cl 	; r5=*(r4+4)  checksum?
+268: .cl 		; return if r7==0
+26a: .cl 	; r3=r4>>6=0x80000
+26e: .cl 		; return if r7 outside eeprom
+272: .cl 	; (*0x2d0=0x00002008)
+274: .cl 	; r0=r7<<2 + 0x0002008
+276: .cl 	; r3=*0x2d4=0x0007ffff
+27a: .cl 		; return if r0 outside eeprom
+27c: .cl 	; (*0x2d0=0x00002008)
+27e: .cl 		; r3=2
+280: .cl 	; r0=1<<(13+22)=0x2000000
+282: .cl 	; r2=r7
+284: .cl 		; decodefw(0x2000000,0x2008,r7,2)
+288: .cs 	;
+288: .cs 	; verify checksum
+288: .cs 	;
+288: .cs 	;	// r7 was count of words to process
+288: .cs 	;	buf=sram_start
+288: .cs 	;	dmagic=0x42474552
+288: .cs 	;	checksum=0
+288: .cs 	;	for (r6=r7-1; r6!=0; r6--) {
+288: .cs 	;		// update dynamic magic number
+288: .cs 	;		bit = dmagic&1
+288: .cs 	;		dmagic = dmagic>>1
+288: .cs 	;		if (bit) dmagic += 1<<31
+288: .cs 	;		// add word to checksum
+288: .cs 	;		checksum += dmagic ^ *(buf++)
+288: .cs 	;	}
+288: .cs 	;	if (checksum != r5)
+288: .cs 	;		return
+288: .cs 	;
+288: .cl 		; r0=0
+28a: .cl 	; (*0x2d8=0x42474552)
+28e: .cl 	; r1=1<<25=0x2000000
+290: .cl 	; r6=r7-1
+294: .cl 		; already checked, not happening
+296: .cs 	; checksum loop
+296: .cl 	; r3=r2>>1
+298: .cl 	; r2=r2>>1
+29c: .cl 	; r2=r3
+29e: .cl 	; (*0x2dc=0x80000000)
+2a0: .cl 		; r3=r2|0x80000000
+2a2: .cl 	; r7=*r1++
+2a4: .cl 	; r2=r3
+2a6: .cl 		; r3^=r7
+2a8: .cl 	; r0=r3+r0
+2aa: .cl 	; r3=r6
+2ac: .cl 		; r6--
+2b0: .cl 	; loop until r3==0
+2b4: .cl 	; return if checksum fails?
+2b6: .cs
+2b6: .cl 		; disable interrupts
+2ba: .cl 	; (*0x2e0=0x00600620 PM0 port mode register)
+2c0: .cl 	; r3=1<<15=0x8000
+2c4: .cl 	; set P1O_7, make it an output port
+2c6: .cs 							;   this will redirect IRQ handler
+2c6: .cs 	; call OS
+2c6: .cl 		; = bx r4 call start of RAM
+2ca: .cs 	; return
+2d0: .cs
+2d0: .cl 	; start of real firmware in eeprom
+2d0: .word [1]
+2d4: .word [1]
+2d8: .word [1]
+2dc: .word [1]
+2e0: .word [1]
+2e4: .cs
+2e4: .cs 	;
+2e4: .cs 	; SUBROUTINE: zee real main loop that haz no exit?
+2e4: .cs 	;	appears to handle midi messages
+2e4: .cs 	;
+2ea: .cl 	; 0x99
+2ec: .cl 		; set_led(LED_LEARN,r1=1)
+2f2: .cl 	; 0x98
+2f4: .cl 		; set_led(LED_STORE,r1=1)
+2fe: .cl 	; (*0x4f0=0x02082058 midi_rx_buf)
+308: .cs
+308: .cl 	; (*0x4f4=0x02081048)
+30a: .cl 	; (*0x4f0=0x02082058 midi_rx_buf)
+30c: .cs
+30c: .cl 		; r3=0
+30e: .cl 		; r2=0
+310: .cl 		; r0=0
+312: .cl 	; r1=r4
+314: .cl 			; 0x8fc(0,r4,0,0)
+31a: .cl 	; r2=1<<9=0x200
+31c: .cl 	; r0=r4
+31e: .cl 	; r1=r6=midi_rx_buf
+320: .cl 			; 0xa86(r4, midi_rx_buf, 0x200)
+326: .cl 		; length>0 needed
+32a: .cl 	; 0x4d
+32c: .cl 		; *(r6+0)==0x4d or next
+32e: .cs 	; must be Behringer SysEx
+330: .cl 	; 0xf0
+332: .cl 		; *(r6+1)==0xf0 or next
+338: .cl 		; *(r6+2)==0x00 or next
+33e: .cl 		; *(r6+3)==0x20 or next
+342: .cl 	; 0x32
+344: .cl 		; *(r6+4)==0x32 or next
+346: .cs 	; device id [r6, #5] is ignored
+346: .cs 	; model must match
+348: .cl 	; 0x7f
+34a: .cl 		; model 0x7f is ok (any)
+34e: .cl 		; or 0x14 (BCF2000) too
+350: .cs 	; Behringer SysEx command
+354: .cl 		; *(r6+7)==1 (request identity)
+356: .cl 	; 0x34
+358: .cl 		; *(r6+7)==0x34 (receive firmware)
+35a: .cs 	;
+35a: .cs 	; SysEx command: receive firmware
+35a: .cs 	;
+35c: .cl 	; 0x32
+360: .cl 		; length==0x131 or next (remember we have an extra 0x4d before 0xf0 at start)
+362: .cl 	; (*0x4f0=0x02082058)
+364: .cl 	; 0xff
+366: .cl 	; r0=r5
+368: .cl 		; r1=259=0x103
+36a: .cl 		; sysex_firmware_decode(midi_rx_buf+8, 0x103, r2)
+36e: .cl 	; 0xff
+370: .cl 	; start of firmware data (offset 7+4 in buffer)
+372: .cl 		; 256 data bytes
+374: .cl 		; sysex_compute_checksum(midi_rx_buf+11,0x100)
+37c: .cl 		; checksum must match or next
+37e: .cl 	; (*0x4f0=0x02082058)
+386: .cl 		; r0=*(r6+8)<<8+*(r6+9) compute given address
+388: .cl 	; 0xff
+38a: .cl 	; r3=0xff00
+38c: .cl 	; r4=r0
+392: .cs 	; address 0xff00 given in firmware send --?--> reboot
+394: .cl 		; display on screen(midi_rx_buf)
+39a: .cl 	; (0x4f8 "boot")
+39e: .cl 		; strncmp(midi_rx_buf, "boot", 4)
+3a4: .cl 		; if string was "boot"
+3a6: .cl 		; then call bx r0 = soft reboot
+3ac: .cs 	;
+3ac: .cs 	; SysEx command: request identity
+3ac: .cs 	;
+3b2: .cl 			; send Behringer sysex header cmd 2
+3b6: .cl  ; ptr to long bootloader message
+3bc: .cl 		; length of string
+3be: .cl 			; finish by sending data
+3c0: .cs 	;
+3c0: .cs 	; continue firmware upload; remember that
+3c0: .cs 	; 	r4=r0=given_address
+3c0: .cs 	;	r6=midi_rx_buf that has decoded firmware data
+3c2: .cl 		; r3=1<<11=0x800
+3c6: .cl 			; addr<0x800 or next
+3c8: .cl 		; r6=addr>>4
+3ca: .cl 		; (initial value was ^0)
+3ce: .cl 			; jump if (addr>>4)==*sp4
+3d0: .cs
+3d0: .cl 			; r3=1
+3d2: .cl 		; r2=*sp4
+3d6: .cl 			; if r2==^1 jump
+3dc: .cl 			; if *sp==0 jump
+3de: .cl 	; 0x45
+3e2: .cl 			; display_char_at(0,0x45='E')
+3e6: .cl 		; *sp4=r6
+3ea: .cl 		; *sp=0  bitmask indicating which sections of sector done
+3ec: .cs 	; update display
+3ee: .cl 		; r0=r4&7
+3f0: .cl 		; (*0x504 is 0x15eb here: 01 02 40 10 08 04 40 20)
+3f2: .cl 		; r1=*(0x15eb+r4&7)
+3f4: .cl 			; r0=0
+3f6: .cl 			; 0x1424(0,r1) <=> *(0x02084988+0x14)=r1
+3fa: .cl 			; r0=0x31='1'
+3fe: .cl 	; 0x63
+402: .cl 			; if *sp4<=99: r0=0x20=' '
+406: .cl 		; r1=r0&0xff
+40a: .cl 			; display_char_at(1,r0&0xff)
+422: .cl 	; 0x29
+42a: .cl 			; display_char_at(2,(r1+0x30)&0xff)
+436: .cl 	; 0x29
+43a: .cl 		; r1=(r1+0x30)&0xff
+43e: .cl 			; display_char_at(3,(r1+0x30)&0xff)
+442: .cs 	; copy this piece of firmware to memory
+444: .cl 		; r6=r4&0xf=given_address&0xf
+448: .cl 			; r0=1<<r6
+44e: .cl 		; *sp0 |= r0  indicate this part of section done
+450: .cl 		; r0=r6<<8
+452: .cl 		; decoded firmware data
+454: .cl 		; (*0x508=0x02082258)
+458: .cl 	; 0xff
+45c: .cl 			; memcpy(0x02082258+(r6<<8), syx_fw_data, 0x100)
+462: .cl 			; r6==0xf or next
+464: .cs 	; flash when 16 packets received
+464: .cs 	;	and use start of midi_rx_buf to construct a reply packet I guess
+468: .cl 		; r0=(r4>>7)&0x3f
+46a: .cl 		; (*0x4f0=0x02082058 midi_rx_buf)
+46c: .cl 	; midi_rx_buf[0] = (r4>>7)&0x3f
+472: .cl 	; midi_rx_buf[1] = r4&0x3f
+476: .cl 	; midi_rx_buf[2] = 0
+478: .cl 		; *sp=bitfield
+47a: .cl 		; (*0x50c=0xffff)
+47e: .cl 			; jump when sector full
+484: .cs 	; flash erase sector *sp4 and program
+486: .cl 	; r0=*sp4*0x1000
+488: .cl 	; r4=r0
+48a: .cl 	; flash erase 4k sector at r0
+490: .cl 	; if flash erase failed:
+492: .cl 	; 	r0=2
+494: .cl 		;	jump
+498: .cl 	; (*0x508=0x02082258)
+49e: .cl 		; decode_write_data(0x02082258, 0x1000, *sp4)
+4a4: .cl 	; (*0x508=0x02082258)
+4aa: .cl 		; copy_to_flash(*sp4*0x1000, 0x02082258, 0x1000)
+4b4: .cs 	; 'r0'=0 when ok, r0=1 when skipped, r0=3 when write failed, r0=2 when erase failed
+4b4: .cl 	; midi_rx_buf[2] = status
+4ba: .cl 	; 0x46
+4ca: .cl 		; display_char_at(0,r1&0xff)
+4d2: .cl 	; 0x35
+4d4: .cl 		; 0xf54(53,0,0)
+4dc: .cl 		; send 3 bytes
+4de: .cl 	; r0=r6=midi_rx_buf_misused_as_result_buf
+4e0: .cs 	; send sysex data then sysex finish
+4e0: .cl 		; midi send
+4e8: .cl 	; =0xf7 end of sysex message
+4ea: .cl 		; midi send
+4f0: .cs
+4f0: .cl 	; midi_rx_buf
+4f0: .word [1]
+4f4: .word [1]
+4f8: .cs
+4f8: .cl 
+4f8: .ascii [4]
+4fc: .short [1]
+500: .cs
+500: .cl 	; = 0x15d4 here, points to "BCF2000 BOOTLOADER 1.0"
+500: .word [1]
+504: .cl 	; = 0x15eb here
+504: .word [1]
+508: .word [1]
+50c: .word [1]
+510: .cs
+510: .cs 	;
+510: .cs 	; SUBROUTINE: main bootloader
+510: .cs 	;
+512: .cl 		; (*0x5c4=0x02081058)
+514: .cl 		; (*0x5c8=0x02081048)
+520: .cl 	; 0x4d
+528: .cl 	; 0x50
+536: .cl 	; 0x64
+53c: .cl 		; verify flash chip
+544: .cs 	; wrong flash chip
+544: .cl 	; (0x5cc "E FL")
+546: .cl 		; display on screen
+54a: .cl 	; r6=1
+54c: .cl 	; (*0x5d4=0x02082058)
+54e: .cs 	; loop
+54e: .cl 	; r0=0x98
+550: .cl 	; r1=r5
+552: .cl 		; set_led(LED_STORE, r5)
+556: .cl 	; r0=r6=1
+55c: .cl 		; r0=0 if r5 was set
+564: .cl 	; 0xff
+566: .cl 	; r0=500
+568: .cl 	; r1=r4=0x02081048
+570: .cl 		; loop until r0==3
+572: .cs
+574: .cl 	; r2=1<<9=0x200
+576: .cl 	; r0=r4
+578: .cl 	; r1=r7
+580: .cl 	; 0x50
+58c: .cl 	; 0x98
+58e: .cl 		; set_led(LED_STORE,0)
+592: .cs
+592: .cs 	; -> flash chip id ok
+592: .cs 	; I guess now is detected if 'store' and 'learn' keys are pressed
+592: .cs 	; and if so, proceed to "load" else boot OS.
+594: .cl 		; get_key(KEY_LEARN)
+59a: .cl 		; if not pressed, run OS
+59e: .cl 		; get_key(KEY_STORE)
+5a4: .cl 		; if not pressed, run OS
+5a6: .cl 	; (0x5d8 "load")
+5a8: .cl 	; show on display
+5ac: .cl 	; bootloader rescue mode to flash firmware
+5b0: .cl 	; run OS?
+5b4: .cl 	; (0x5e0 "noOS")
+5b6: .cl 	; show on display
+5ba: .cl 	; bootloader rescue mode to flash firmware
+5c0: .cl 	; infinite loop
+5c2: .cs
+5c2: .short [1]
+5c4: .word [1]
+5c8: .word [1]
+5cc: .cs
+5cc: .cl 
+5cc: .ascii [4]
+5d9: .word [1]
+5d4: .word [1]
+5d8: .cl 
+5d8: .ascii [4]
+5dc: .word [1]
+5e0: .cl 
+5e0: .ascii [4]
+5e8: .cs
+5e8: .cs 	;
+5e8: .cs 	; SUBROUTINE: clear some memory areas
+5e8: .cs 	;
+5ea: .cl 		; r7=0
+5ec: .cl 	; (*0x614=0x02083258)
+5ee: .cs
+5f4: .cl 	; r0=(r7<<3-r7)<<2+r4
+5fa: .cl 		; memset(r0, 0, 28)
+5fe: .cl 		; r7++
+602: .cl 		; do it 8 times
+606: .cl 	; (*0x618=0x02080004)
+608: .cl 	; *0x02080004=0
+60a: .cl 	; *0x02080008=0
+612: .cs
+612: .short [1]
+614: .word [1]
+618: .word [1]
+61c: .cs
+61c: .cs 	;
+61c: .cs 	; SUBROUTINE:
+61c: .cs 	;	is run at end of bootloader entry point
+61c: .cs 	;	in some cases is may hang in infinite loop
+61c: .cs 	;
+620: .cl 		; return if r0>8
+626: .cl 	; r1=(r0<<3-r0)<<2
+628: .cl 	; (*0x644=0x02083258)
+630: .cl 		; return if (*0x644+r1)==0
+632: .cl 	; r2=*0x648=0x02080004)
+634: .cl 	; *r2=r0
+638: .cl 	; *(r1+24)=2
+63c: .cl 			; prbly run OS
+644: .cs
+644: .word [1]
+648: .word [1]
+64c: .cs
+64c: .cs 	;
+64c: .cs 	; SUBROUTINE:
+64c: .cs 	;	only called once from bootloader entry point routine
+64c: .cs 	;	with arguments:
+64c: .cs 	;		r0=0
+64c: .cs 	;		r1=main bootloader entry point at 0x511 here
+64c: .cs 	;		r2=0
+64c: .cs 	;		r3=0x02080048
+64c: .cs 	;		calling *sp=1<<12=0x1000
+64c: .cs 	;
+650: .cl 		; r4=^0, return code on failure?
+652: .cl 	; calling *sp
+654: .cl 	; r7=r3
+656: .cl 	; (*0x6cc=0x02083258)
+65a: .cl 		; something else if r0<0
+65e: .cl 		; return if r0>=8
+666: .cl 	; r3=0x02083258+6*r0  <=>  r3=r5+(r0<<3-r0)<<2
+668: .cl 	; r3=*(r3+24)
+66c: .cl 		; return if r0!=0
+670: .cs
+68c: .cs
+68e: .cl 	; return unless calling *sp>0x40
+690: .cl 	; r0=^0
+696: .cs
+696: .cl 	; r3= calling_*sp - 4
+698: .cl 	; (*0x6d0=0x02180871)
+69a: .cl 	; *(orig_r3+calling_*sp-4)=*0x02180871
+69e: .cl 	; *(orig_r3+calling*_sp-8)=r1
+6a6: .cl ; *(orig_r3+calling*_sp-(9..+36))=0 {byte}
+6aa: .cl 	; 0x24
+6ac: .cl 		; loop 36 times
+6b4: .cl 	; r6=r5+6*r0  <=>  r6=r5+(r0<<3-r0)<<2
+6b6: .cl 	; *(r6+16)=0
+6b8: .cl 	; *(r6+ 8)=r2
+6ba: .cl 	; *(r6+20)=0
+6bc: .cl 	; *(r6+12)=0
+6be: .cl 	; *(r6+ 4)=orig_r3
+6c2: .cl 	; *(r6+ 0)=orig_r3+calling_*sp-9-36 (?)
+6c6: .cl 	; *(r6+24)=1
+6c8: .cl 			; return
+6ca: .cs
+6ca: .short [1]
+6cc: .word [1]
+6d0: .word [1]
+6d4: .cs
+6d4: .cs 	;
+6d4: .cs 	; SUBROUTINE: increment timecounter at *0x02080008++
+6d4: .cs 	;
+6de: .cs
+6de: .short [1]
+6e0: .cl 	; =RAM with copy of pre-boot's 0x1908-
+6e0: .word [1]
+6e4: .cs
+6e4: .cs 	;
+6e4: .cs 	; SUBROUTINE:
+6e4: .cs 	;
+6ea: .cs
+6ea: .short [1]
+6ec: .cl 	; =RAM with copy of pre-boot's 0x1908-
+6ec: .word [1]
+6f0: .cs
+6f0: .cs 	;
+6f0: .cs 	; SUBROUTINE:
+6f0: .cs 	;
+6f2: .cl 		; (*0x80c=0x02080004)
+6f6: .cl 		; (*0x80c=0x02080004)
+6fc: .cl 		; (*0x80c=0x02080004)
+700: .cl 		; (*0x80c=0x02080004)
+70c: .cl 		; (*0x80c=0x02080004)
+716: .cl 		; (*0x80c=0x02083258)
+72c: .cl 		; (*0x80c=0x02080004)
+73e: .cl 		; (*0x80c=0x02080004)
+748: .cl 		; (*0x80c=0x02083258)
+74e: .cl 		; (*0x80c=0x02080004)
+75c: .cl 		; (*0x80c=0x02080004)
+766: .cl 		; (*0x80c=0x02083258)
+770: .cl 		; (*0x80c=0x02080004)
+788: .cl 		; (*0x80c=0x02080004)
+792: .cl 		; (*0x80c=0x02083258)
+79a: .cl 	; loop while *	; (*0x80c+20)==0
+79c: .cs
+79c: .cl 		; (*0x80c=0x02080004)
+7ac: .cl 		; (*0x80c=0x02080004)
+7b6: .cl 		; (*0x80c=0x02083258)
+7c6: .cl 		; (*0x80c=0x02080004)
+7d0: .cl 		; (*0x80c=0x02083258)
+7d6: .cl 		; (*0x80c=0x02080004)
+7e0: .cl 		; (*0x80c=0x02083258)
+7e6: .cl 		; (*0x80c=0x02080004)
+7f0: .cl 		; (*0x80c=0x02083258)
+7fa: .cl 		; (*0x80c=0x02083258)
+808: .cs
+808: .word [1]
+80c: .word [1]
+810: .cs
+810: .cs 	;
+810: .cs 	; SUBROUTINE: (not used)
+810: .cs 	;
+812: .cl 		; (*0x820=0x02080004)
+820: .cs
+820: .word [1]
+824: .cs
+824: .cs 	;
+824: .cs 	; SUBROUTINE: (not used directly)
+824: .cs 	;
+832: .cl 	; (0x85c)
+85a: .cs
+85a: .short [1]
+85c: .word [1]
+860: .cs
+860: .cs 	;
+860: .cs 	; SUBROUTINE: (not used directly)
+860: .cs 	;
+86e: .cl 	; (0x898)
+886: .cl 	; (0x89c)
+898: .cs
+898: .word [1]
+89c: .word [1]
+8a0: .cs
+8a0: .cs 	;
+8a0: .cs 	; SUBROUTINE: (not used directly)
+8a0: .cs 	;
+8ae: .cl 	; (0x8dc)
+8dc: .cl 	; 0x58
+8ee: .cl 	; (0x8f8)
+8f6: .cs
+8f6: .short [1]
+8f8: .word [1]
+8fc: .cs
+8fc: .cs 	;
+8fc: .cs 	; SUBROUTINE:
+8fc: .cs 	;	hacked qemu currently hangs here
+8fc: .cs 	;
+8fe: .cl 		; r4=r2
+900: .cl 		; r5=r3
+902: .cl 		; r6=r0
+904: .cl 		; r7=r1
+906: .cl 		; (*0x970=0x02080004)
+910: .cl 		; (*0x974=0x02083258)
+93c: .cs 	; return
+942: .cs
+942: .cl 		; (*0x970=0x02080004)
+94e: .cl 		; (*0x974=0x02083258)
+968: .cl 		; (*0x974=0x02083258)
+970: .cs
+970: .word [1]
+974: .word [1]
+978: .cs
+978: .cs 	;
+978: .cs 	; SUBROUTINE:
+978: .cs 	;
+9a2: .cs
+9a2: .cs 	;
+9a2: .cs 	; SUROUTINE:
+9a2: .cs 	;
+9b4: .cs
+a86: .cs
+a86: .cs 	;
+a86: .cs 	; SUBROUTINE: get next received midi message to *r1 (I guess)
+a86: .cs 	;
+a88: .cl 	; *(r0++)=r4; *(r0++)=r7
+a8a: .cl 			; restore r0
+a8c: .cl 		; r5=*(r0+12)
+a90: .cl 			; return 0 if *(r0+1)==*(r0+2)
+a98: .cs
+a98: .cl 		; r3=*(r5+r7)
+a9a: .cl 		; r6=*(r0+8)
+a9c: .cl 			; r7+=4
+aa2: .cl 			; r7=0 if r7>r6
+aa6: .cl 			; if r4>r7:
+aa8: .cl 		; 	r4=r4-r7
+aaa: .cl 				; else:
+aac: .cl 		;	r6=r6-r6
+aae: .cl 		;	r4=r6-r4
+ab2: .cl 			; if r4>=r3:
+ab4: .cl 		;	r3=r4
+ab6: .cl 		;	r4=r3
+ab8: .cl 				; else:
+aba: .cl 		;	r6=r7
+abc: .cl 	;	*(r5+r6)=r6 {byte}
+abe: .cl 	;	*(r1)=r6
+ac0: .cl 		;	r6=*(r0+8)
+ac2: .cl 			;	r1++
+ac4: .cl 			;	r7++
+ac8: .cl 			; 	if r7<=r6:
+aca: .cl 			;		r6=0
+acc: .cl 			;		r2--
+ace: .cl 			;		r4--
+af6: .cs
+af6: .cs 	; infinite loop
+afa: .cs
+afa: .short [1]
+afc: .cs
+afc: .cs 	;
+afc: .cs 	; SUBROUTINE: verify flash chip
+afc: .cs 	;	returns if bottom memory is correct flash chip (r0=0) or not (r0=1)
+afc: .cs 	;
+b00: .cl 	; r1=*0
+b02: .cl 		; r0=^r1
+b04: .cl 		; is_ram_chip=r7=0
+b06: .cl 	; *0=r0
+b08: .cl 	; r3=*0
+b0a: .cl 	; r2=is_ram_chip=0
+b0e: .cl 		; if writing 0 fails:
+b10: .cl 		; 	is_ram_chip=r7=0
+b12: .cl 	; (*0xb60=0x0208000c)
+b14: .cl 	; *0x0208000c=is_ram_chip
+b16: .cl 	; *0=orig_zero_contents=r1
+b18: .cl 	; r0=is_ram_chip
+b1c: .cl 		; if flash, check id
+b26: .cs
+b26: .cl 		; disable interrupts
+b2a: .cs
+b2a: .cs 	;
+b2a: .cs 	; verify flash chip id
+b2a: .cs 	; returns: r0=0 if matches, r1=1 if not
+b2a: .cs 	;
+b2a: .cs 	; flash command: software id entry
+b2a: .cl 	; 0xaa
+b2c: .cl 	; (*0xb64=0x00005550)
+b2e: .cl 	; *0x5555=0xaa
+b30: .cl 	; 0x55
+b32: .cl 	; (*0xb68=0x00002aa0)
+b34: .cl 	; *0x2aaa=0x55
+b36: .cl 	; 0x90
+b38: .cl 	; *0x5555=0x90
+b3a: .cs 	; sleep 5 for instructions
+b3c: .cl 															; (mov r8, r8)
+b3e: .cl 															; (mov r8, r8)
+b40: .cl 															; (mov r8, r8)
+b42: .cl 															; (mov r8, r8)
+b44: .cl 	; read flash id
+b46: .cs 	; flash command: software id exit
+b46: .cl 	; *0x5555=0xaa
+b48: .cl 	; *0x2aaa=0x55
+b4a: .cl 	; 0xf0
+b4c: .cl 	; *0x5555=0xf0
+b4e: .cl 		; enable IRQ
+b54: .cl 	; (*0xb6c=0x0000b7bf)
+b58: .cl  ; if correct flash id, return 1
+b5c: .cl 	; return 0, not ok
+b60: .cs
+b60: .cl 	; is_ram_chip
+b60: .word [1]
+b64: .cl 	; 0x5555 is flash register 1
+b64: .word [1]
+b68: .cl 	; 0x2aaa is flash register 2
+b68: .word [1]
+b6c: .cl 	; flash id expected (that of SST39SF040)
+b6c: .word [1]
+b70: .cs
+b70: .cs 	;
+b70: .cs 	; SUBROUTINE: copy memory to flash
+b70: .cs 	;
+b72: .cl 	; r4=r0
+b74: .cl 	; r7=r1
+b76: .cl 	; (*0xc14=0x0208000c is_ram_chip)
+b7c: .cl 		; if ram chip, return 1 (error)
+b8a: .cs 	; RAM chip
+b92: .cl 		; disable interrupts
+b96: .cs 	; write and verify byte from r7 to r4+r5
+b98: .cl 	; (*0xc18=0x00005550)
+b9a: .cl 	; *0x5555=0xaa
+b9c: .cl 	; 0x55
+b9e: .cl 	; (*0xc1c=0x00002aa0)
+ba0: .cl 	; *0x2aaa=0x55
+ba2: .cl 	; 0xa0
+ba4: .cl 	; *0x5555=0xa0
+ba6: .cl 	; r0=*r7
+ba8: .cl 	; *(r4+r5)=r0
+baa: .cl 	; 0x96
+bac: .cl 	; r0=*(r4+r5)
+bae: .cl 	; r1=*r7
+bb0: .cl 				; verify write
+bb2: .cl 			; jump if ok
+bb4: .cs 	; write verify failed: handle interrupt? and verify again
+bb4: .cl 		; r0=r6
+bb6: .cl 			; r6--
+bba: .cl 			; if r0==0:
+bbc: .cl 		; enable IRQ
+bc0: .cl 				; 	return 0
+bc4: .cl 		; r0=0x600000
+bc6: .cl 	; r0=*0x600008
+bcc: .cl 				; prbly: handle midi when needed
+bd0: .cl 	; r0=*(r4+r5)
+bd2: .cl 	; r1=*r7
+bd6: .cl 			; if verification failed, try again
+bd8: .cs 	; write verify succeeded
+bd8: .cl 		; enable IRQ
+bfc: .cs 	; written successfully: return 0
+c06: .cs
+c0e: .cs 	; ram chip: return 1
+c14: .cs
+c14: .word [1]
+c18: .cl 		; 0x5555 is flash register 1
+c18: .word [1]
+c1c: .cl 		; 0x2aaa is flash register 2
+c1c: .word [1]
+c20: .cs
+c20: .cs 	;
+c20: .cs 	; SUBROUTINE: flash erase
+c20: .cs 	;	erase 4k flash memory at 4k-aligned address r0
+c20: .cs 	;	each byte's contents becomes 0xff
+c20: .cs 	;
+c24: .cl 	; must 4k-align sector
+c26: .cl 	; (*0xca4=0x0208000c is_ram_chip)
+c2e: .cl 	; use flash-program method for flash
+c30: .cs 	; memset to 0xff for ram
+c32: .cl 	; 0xff
+c36: .cl 		; memset(r7, 255, r6<<12)
+c3a: .cl 		; return r6=1
+c3c: .cs
+c3c: .cs 	; flash command: sector erase of sector r7
+c3c: .cl 		; disable interrupts
+c40: .cl 	; 0xaa
+c42: .cl 	; (*0xca8=0x00005550)
+c44: .cl 	; *0x5555=0xaa
+c46: .cl 	; 0x55
+c48: .cl 	; (*0xcac=0x00002aa0)
+c4a: .cl 	; *0x2aaa=0x55
+c4c: .cl 	; 0x80
+c4e: .cl 	; *0x5555=0x80
+c50: .cl 	; *0x5555=0xaa
+c52: .cl 	; *0x2aaa=0x55
+c54: .cl 	; 0x30
+c56: .cl 	; *sector=0x30
+c58: .cl 	; (*0xcb0=0x00036ee8)
+c66: .cl 		; enable IRQ
+c80: .cl 		; enable IRQ
+c8e: .cl 	; 0xff
+c9a: .cs
+ca0: .cs 	; return r6
+ca4: .cs
+ca4: .word [1]
+ca8: .cl 		;0x5555 is flash register 1
+ca8: .word [1]
+cac: .cl 		;0x2aaa is flash register 2
+cac: .word [1]
+cb0: .word [1]
+cb4: .cs
+cb4: .cs 	;
+cb4: .cs 	; SUBROUTINE: setup UART+SC+some IO
+cb4: .cs 	;
+cb8: .cl 	; (*0xd20=0x00600300 UART base)
+cba: .cl 	; FCR=1
+cbc: .cl 	; 0x83
+cbe: .cl 	; LCR=0x83
+cc2: .cl 	; (*0xd24=0x00600320 UART base+0x20)
+cc4: .cl 	; CSR=3
+cc8: .cl 	; DLM=0
+ccc: .cl 	; DLL=6
+cce: .cl 	; LCR=3
+cd0: .cl 	; IER=1
+cd4: .cl 	; (*0xd28=0x00600400 SC base)
+cd6: .cl 	; STCON=8
+cd8: .cl 	; (*0xd2c=0x0000fffa)
+cda: .cl 	; STMR=0xfffa
+cdc: .cl 	; 0x71
+cde: .cl 	; (*0xd30=0x00600410 SC base+0x10)
+ce0: .cl 	; STMC=0x71
+ce2: .cl 	; (*0xd34=0x00600620 I/O ports)
+ce6: .cl 	; 0xe0
+cea: .cl 	; set bit 5-6 of PFS2
+cec: .cl 	; (*0xd38=0x02080010)
+cee: .cl 	; *0x0208001c=0 {b}
+cf0: .cl 	; *0x0208001d=0 {b}
+cf2: .cl 	; 0xff
+cf4: .cl 	; *0x02080028=0x000000ff
+cf6: .cl 	; (*0xd3c=0x02080010)
+cf8: .cl 	; *0x02080011=0xff
+cfa: .cl 	; *0x02080010=0xff
+cfc: .cl 		; (*0xd40=0x02080014)
+cfe: .cl 		; *0x02080014=0
+d00: .cl 		; *0x02080018=0
+d02: .cl 		; (*0xd44=0x02084338)
+d04: .cl 	; *0x02084330=0
+d0e: .cl 		; (*0xd48=0x00600020 int level control register 0)
+d10: .cl 	; r1=ILCON0
+d12: .cl 	; (0xd4c)
+d16: .cl 	; (0xd50)
+d1a: .cl 	; ILCON0 = (ILCON0&0xf0f)|0x4040
+d20: .cs
+d20: .cs
+d20: .word [1]
+d24: .word [1]
+d28: .word [1]
+d2c: .word [1]
+d30: .word [1]
+d34: .word [1]
+d38: .word [1]
+d3c: .word [1]
+d40: .word [1]
+d44: .word [1]
+d48: .word [1]
+d4c: .word [1]
+d50: .word [1]
+d54: .cs
+d54: .cs 	;
+d54: .cs 	; SUBROUTINE:
+d54: .cs 	;
+d54: .cl 		; (*0xd60=0x02080010)
+d58: .cl 		; (*0xd64=0x02084338)
+d5e: .cs
+d5e: .short [1]
+d60: .word [1]
+d64: .word [1]
+d68: .cs
+d68: .cs 	;
+d68: .cs 	; SUBROUTINE: IRQ handler for UART data available or char timeout
+d68: .cs 	;
+d68: .cl 		; (*0xda0=0x02080010)
+d6e: .cl 		; (*0xda4=0x00600300)
+d82: .cl 		; (*0xda8=0x02084538)
+d88: .cl 		; (*0xdac=0x0208499a)
+da0: .cs
+da0: .word [1]
+da4: .word [1]
+da8: .word [1]
+dac: .word [1]
+db0: .cs
+db0: .cs 	;
+db0: .cs 	; SUBROUTINE: IRQ handler for SC baudrate
+db0: .cs 	;
+db2: .cl 		; (*0xdf0=0x00600400)
+db6: .cl 		; (*0xdf4=0x02080010)
+dc2: .cl 	; 0x40
+dd2: .cl 		; (*0xdf8=0x02084738)
+dd8: .cl 		; (*0xdfc=0x0208499a)
+df0: .cs
+df0: .word [1]
+df4: .word [1]
+df8: .word [1]
+dfc: .word [1]
+e00: .cs
+e00: .cs 	;
+e00: .cs 	; SUBROUTINE: send midi byte
+e00: .cs 	;	r0 is midi byte
+e00: .cs 	;	r1&r2 can 0 but do something
+e00: .cs 	;
+e0c: .cl 		; (*0xf0c=0x0208499a)
+e1c: .cl 	; 0x80
+e26: .cl 		; (*0xf10=0x02080010)
+e28: .cl 	; 0xf0
+e36: .cl 		; (*0xf14=0x02080014)
+e3c: .cl 	; 0x7d
+e48: .cl 		; (*0xf14=0x02080014)
+e52: .cs
+e52: .cl 		; (*0xf10=0x02080010)
+e58: .cl 	; 0xff
+e60: .cl 		; (*0xf14=0x02080014)
+e6a: .cl 		; (*0xf18=0x02080010)
+e72: .cl 		; disable interrupts
+e76: .cl 		; (*0xf1c=0x00600400)
+e80: .cl 	; 0x40
+e88: .cl 		; disable interrupts
+e8c: .cl 		; (*0xf20=0x00600300)
+eb4: .cl 		; enable IRQ
+ec0: .cl 		; disable interrupts
+eca: .cl 		; (*0xf24=0x02084538)
+ee8: .cl 		; enable IRQ
+ef4: .cl 		; disable interrupts
+efe: .cl 		; (*0xf28=0x02084738)
+f06: .cl 		; enable IRQ
+f0c: .cs
+f0c: .word [1]
+f10: .word [1]
+f14: .word [1]
+f18: .word [1]
+f1c: .word [1]
+f20: .word [1]
+f24: .word [1]
+f28: .word [1]
+f2c: .cs
+f2c: .cs 	;
+f2c: .cs 	; SUBROUTINE: send midi data from r0 length r1
+f2c: .cs 	;
+f2c: .cs 	;	// very crude idea:
+f2c: .cs 	; 	for (r6=r1; r6>0; r6--):
+f2c: .cs 	;		0xe00(r0[r6], r2, r3)
+f2c: .cs 	;
+f2e: .cl 	; r4=r3
+f30: .cl 	; r5=r2
+f32: .cl 	; r6=r1
+f34: .cl 	; r7=r0
+f38: .cl 		; r1!=0 or return
+f3a: .cl ; r0=*r7
+f3c: .cl 	; r1=r5
+f3e: .cl 	; r2=r4
+f40: .cl 		; r7++
+f42: .cl 			; midi send?
+f46: .cl 	; r0=r6
+f48: .cl 		; r6--
+f4c: .cl 		; loop while r0>0
+f54: .cs
+f54: .cs 	;
+f54: .cs 	; SUBROUTINE: send Behringer SysEx header
+f54: .cs 	;	r1 and r2 are passed on to 0xe00
+f54: .cs 	;	r0 is command id
+f54: .cs 	;
+f58: .cl 	; 0xf0
+f62: .cl 		; 0x00
+f6c: .cl 		; 0x20
+f76: .cl 		; 0x32
+f80: .cl 	; 0x7f
+f8a: .cl 		; 0x14
+f96: .cl 	; r5=r0_orig&0x7f
+fa6: .cs
+fa6: .cs 	;
+fa6: .cs 	; SUBROUTINE: IRQ routine for UART statusline changed or txbuf empty
+fa6: .cs 	;
+fa8: .cl 		; (*0x10f0=0x00600300)
+fac: .cl 		; (*0x10f4=0x0208499a)
+fb6: .cl 	; 0x80
+fbc: .cl 		; (*0x10f8=0x02080010)
+fbe: .cl 		; (*0x10fc=0x02084338)
+fc4: .cl 	; 0xf8
+fc8: .cl 	; 0xfe
+fe2: .cl 	; 0x24
+fea: .cl 	; 0xf0
+fee: .cl 	; 0xf7
+ff4: .cl 	; 0x24
+100a: .cl 	; 0xf0
+1012: .cl 	; 0xe9
+1018: .cl 	; (adr r3, 0x1020)
+1028: .cl 	; 0x24
+1048: .cl 	; 0xf0
+1052: .cl 	; 0xd0
+1058: .cl 	; 0xa0
+105e: .cl 	; 0x80
+1062: .cl 	; 0x90
+1068: .cl 	; 0xb0
+106c: .cl 	; 0xc0
+1072: .cl 	; 0xf1
+1078: .cl 	; 0xe0
+107c: .cl 	; 0xf0
+1082: .cl 	; 0x24
+1086: .cl 	; 0x24
+108c: .cl 		; (*0x1100=0x000001ff)
+10a0: .cl 	; 0xfe
+10a2: .cl 	; 0x24
+10ac: .cs
+10b0: .cl 	; 0xf3
+10ee: .cs
+10ee: .short [1]
+10f0: .word [1]
+10f4: .word [1]
+10f8: .word [1]
+10fc: .word [1]
+1100: .word [1]
+1104: .cs
+1104: .cs 	;
+1104: .cs 	; SUBROUTINE:
+1104: .cs 	;	this is in non-thumb mode
+1104: .cs 	;
+1104:        	.arm
+1108: .cl 		; if r0==r1: return
+1110: .cl 		; 	if r0==0:
+1118: .cl 	; 		*r0=sp
+111c: .cl 	;		r2=*(r0+4)
+1124: .cl 		;		if r2>sp: infinite loop
+1128: .cl 	;	sp=*r1
+112c: .cl 	;	r0=*(r1+8)
+1134: .cl 		; return
+1138: .cs
+1138: .cl 	; 0x1140
+113c: .cl 		; goto infinite loop (call 0xaf6 in thumb)
+1140: .cs
+1140: .cl 	; =0xaf7 here, is infinite loop
+1140: .word [1]
+1144: .cs
+1144: .cl 
+1144: .ascii [1b]
+115f: .byte [1]
+1160: .cs
+1160:        	.thumb
+1160: .cs
+1160: .cs 	;
+1160: .cs 	; SUBROUTINE: clear some memory areas
+1160: .cs 	;	*(0x00600620+8)=0x80fc {word} port mode register 3
+1160: .cs 	;	0x02084938..+40 = 0		(array of halfwords)
+1160: .cs 	;	0x02084988..+72 = 0		(array of bits)
+1160: .cs 	;	0x02080038+8 = 0
+1160: .cs 	;	0x0208003c   = 0
+1160: .cs 	;
+1162: .cl 		; (*0x1190=0x000080fc)
+1164: .cl 		; (*0x1194=0x00600620)
+1166: .cl ; *(r1+12)=0x80fc  set PM3
+1168: .cs 	; clear 0x02084938 - +40
+1168: .cl 		; r0=0
+116a: .cl 		; (*0x1198=0x02084983)
+116c: .cl 		; r7=0
+116e: .cl 	; r2=r0*2
+1170: .cl ; *(r1+r2)=0 {word}
+1172: .cl 		; r0++
+1174: .cl 			; 40 times
+1178: .cs 	; clear memory using memset
+1178: .cl 		; (*0x119a=0x02084988)
+117a: .cl 	; 0x48
+117e: .cl 		; memset(*0x119a,0,72)
+1182: .cs 	; clear some memory
+1182: .cl 	; (*0x11a0=0x02080038)
+1184: .cl 	; *(r0+8)=0
+1186: .cl 	; (*0x11a4=0x0208003c)
+1188: .cl 	; *(r0)=0 {byte}
+1190: .cs
+1190: .word [1]
+1194: .word [1]
+1198: .word [1]
+119c: .word [1]
+11a0: .word [1]
+11a4: .word [1]
+11a8: .cs
+11a8: .cs 	;
+11a8: .cs 	; SUBROUTINE:
+11a8: .cs 	;
+11ac: .cl 	; (0x11c4)
+11b4: .cl 	; (0x11c8)
+11c4: .cs
+11c4: .word [1]
+11c8: .word [1]
+11cc: .cs
+11cc: .cs 	;
+11cc: .cs 	; SUBROUTINE:
+11cc: .cs 	;
+11ce: .cl 	; (0x1238)
+11da: .cl 	; (0x123c)
+121c: .cs
+121e: .cl 	; 0xff
+1236: .cs
+1236: .short [1]
+1238: .word [1]
+123c: .word [1]
+1240: .cs
+1240: .cs 	;
+1240: .cs 	; SUBROUTINE: IRQ handler for timer0 overflow
+1240: .cs 	;
+1242: .cl 	; (0x1350)
+1252: .cl 	; 0x80
+1254: .cl 	; 0xff
+125c: .cl 	; 0xe0
+1260: .cl 	; (0x1354)
+127c: .cl 	; (0x1358)
+129c: .cl 	; (0x1358)
+12e2: .cl 	; 0x28
+12e6: .cl 	; (0x135c)
+1322: .cl 	; 0x79
+1334: .cl 	; 0x28
+1338: .cl 	; (0x1354)
+1340: .cl 	; (0x1360)
+1350: .cs
+1350: .word [1]
+1354: .word [1]
+1358: .word [1]
+135c: .word [1]
+1360: .word [1]
+1364: .cs
+1364: .cs 	;
+1364: .cs 	; SUBROUTINE:
+1364: .cs 	;
+1364: .cl 	; (0x1370)
+1368: .cl 	; (0x1374)
+136e: .cs
+136e: .short [1]
+1370: .word [1]
+1374: .word [1]
+1378: .cs
+1378: .cs 	;
+1378: .cs 	; SUBROUTINE: get_key(keyindex)
+1378: .cs 	;	 get r0-th hword from 0x02084938)
+1378: .cs 	;
+137a: .cl 	; 0x28
+1382: .cl 	; (0x1390)
+1386: .cl 	; (0x1394)
+1390: .cs
+1390: .word [1]
+1398: .cs
+1398: .cs 	;
+1398: .cs 	; SUBROUTINE: set_led(led, value)
+1398: .cs 	;	bit r0 at bitfield 0x02084988 is r1&1
+1398: .cs 	;	r1   bit value (only lowest bit used)
+1398: .cs 	;	r0   bit number to modify (=<0xc0)
+1398: .cs 	;
+13b8: .cl 	; (0x13d4)
+13d2: .cs
+13d2: .short [1]
+13d4: .word [1]
+13d8: .cs
+13d8: .cs 	;
+13d8: .cs 	; SUBROUTINE: show text r0 points to on display
+13d8: .cs 	;
+13d8: .cs 	;	r7=r0
+13d8: .cs 	;	r6=*0x13e0
+13d8: .cs 	;	r5=*0x13e4
+13d8: .cs 	;	for (r4=0; r4<4; r4++):
+13d8: .cs 	;		r0 = strchr(*r5, *(r7+r4){byte})
+13d8: .cs 	;		if r0!=0:
+13d8: .cs 	;			*(*0x13e8+r4+20)=*(r6+r0-*r5) {byte}
+13d8: .cs 	;		else:
+13d8: .cs 	;			*(*0x13e8+r4+20)=0 {byte}
+13d8: .cs 	;
+13de: .cl 	; (0x1410)
+13e0: .cl 	; (0x1414)
+13f4: .cl 	; (0x1418)
+13fe: .cl 	; (0x1418)
+1410: .cs
+1410: .word [1]
+1414: .word [1]
+1418: .word [1]
+141c: .cs
+141c: .cs 	;
+141c: .cs 	; SUBROUTINE: display at position r0 character r1
+141c: .cs 	;	uses r0 and r1
+141c: .cs 	;	guess: r0 is display position, r1 value to display
+141c: .cs 	;
+141c: .cs 	;	orig_r0 <= 3 or return
+141c: .cs 	;	val = 0
+141c: .cs 	;	buf = *0x02080038
+141c: .cs 	;	if r1 found in buf:
+141c: .cs 	;		val = *(0x021816d8 + offset_of_r1_in_buf)
+141c: .cs 	;	*(0x02084988+orig_r0) = val
+141c: .cs 	;
+1424: .cl 	; (0x1448)
+142c: .cl 	; (0x144c)
+1438: .cl 	; (0x1450)
+1448: .cs
+1448: .word [1]
+144c: .word [1]
+1450: .word [1]
+1454: .cs
+1458: .cl 	; (0x1460)
+1460: .cs
+1460: .word [1]
+1464: .cs
+1464: .cs 	;
+1464: .cs 	; SUBROUTINE: memcpy(r0,r1,r2)
+1464: .cs 	;    block memory copy from r1 to r0 for r2 bytes
+1464: .cs 	;    probably works also when areas overlap
+1464: .cs 	;
+14ea: .short [1]
+14ec: .cs
+14ec: .cs 	;
+14ec: .cs 	; SUBROUTINE: memcpy(r0, r1, r2) word-aligned starts
+14ec: .cs 	;
+14ee: .short [1]
+14f0: .cs 	; non-thumb instructions
+14f0:    	.arm
+1538: .cs
+1538: .cs 	; thumb mode instructions again
+1538:    	.thumb
+1546: .cs
+1546: .cs 	;
+1546: .cs 	; SUBROUTINE: strncmp(s1, s2, length)
+1546: .cs 	;
+1584: .cs 	;
+1584: .cs 	; SUBROUTINE:
+1584: .cs 	;	some major r0 shuffling with involvement of r1, returns r0/r1
+1584: .cs 	;
+1586: .short [1]
+1588:    	.arm
+15b4:    	.thumb
+15b4: .cs
+15b4: .cs 	;
+15b4: .cs 	; SUBROUTINE: memset(r0,r1,r2)
+15b4: .cs 	;	fill memory area r0 length r2 with bytevalue r1
+15b4: .cs 	;
+15e8: .cs
+15e8: .cs 	;
+15e8: .cs 	; SUBROUTINE: r0=strchr(r0,r1)
+15e8: .cs 	;        find byte r1 in null-terminated string r0
+15e8: .cs 	;        return: r0 points to found position, or 0
+15e8: .cs 	;                r2 contains byte found
+15e8: .cs 	;
+15e8: .cs 	;	while (r2 byte= *r0) != 0:
+15e8: .cs 	;		if r1==r2: return
+15e8: .cs 	;	if r1!=r2: r0=0
+15e8: .cs 	;
+1602: .cs
+1602: .short [1]
+1604: .cl 
+1604: .ascii [16]
+161b: .cs
+161b: .byte [8]
+1623: .cs
+1623: .cs 	; xor cipher for sending/receiving firmware
+1623: .byte [d]
+1630: .short [2]
+1634: .cs
+1634: .cs 	; xor cipher 1 for decoding OS
+1634: .word [8]
+1654: .word [6]
+166c: .cs
+166c: .cs 	; xor cipher 2 for decoding OS
+166c: .word [8]
+168c: .word [7]
+16a8: .cs
+16aa: .cl 	; (0x1818)
+16ac: .cl 	; 0x54
+16b0: .cl 	; 0x74
+16ba: .cl 	; 0x73
+16bc: .cl 	; 0x50
+16c4: .cs
+16c4: .cs 	; SUBROUTINE: disable interrupts
+16c4: .cs 	; 	called indirectly because it is non-thumb code
+16c6: .short [1]
+16c8:    	.arm
+16cc:    	.thumb
+16cc: .cs
+16cc: .cs
+16cc: .cs 	; SUBROUTINE: enable IRQ
+16cc: .cs 	; 	called indirectly because it is non-thumb code
+16ce: .short [1]
+16d0:    	.arm
+16d4:    	.thumb
+16d4: .cs
+16d4: .cs 	; SUBROUTINE:
+16d4: .cs 	; 	called indirectly because it is non-thumb code
+16d6: .short [1]
+16d8:    	.arm
+16dc:    	.thumb
+16dc: .cs
+16dc: .word [1]
+16ec: .word [d]
+1714: .word [1]
+1718: .word [3]

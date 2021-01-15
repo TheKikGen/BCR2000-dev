@@ -1,0 +1,75 @@
+Unofficial Behringer Control Development Kit
+--------------------------------------------
+
+The Behringer Control series are general purpose MIDI controllers. The firmware
+of these devices can be updated by sending special midi messages. This package
+contains the tools generate these midi messages from a firmware image and vice
+versa, and to upload them.
+For building custom software for this device, please see README.firmware.
+
+Requires Python.
+
+                        --- IMPORTANT NOTE ----
+This software is unofficial and based on reverse engineering efforts. Although
+unlikely, reprogramming your device may actually render it dysfunctional and
+unrecoverable without physically opening it and reprogramming the flash chip by
+other means (bricked). Care has been taken to prevent this, but is not
+impossible. You have been warned.
+
+This development kit was created to promote interoperability of BC2000 devices,
+and to allow fixing errors by the community. It is not allowed to use this for
+creating commercial clones of these devices.
+                         --- IMPORTANT NOTE ----
+
+
+** bcfwconvert.py
+
+Converts between the various file formats. The formats are:
+- syx:  System exclusive midi messages that program the device. The official
+        firmware from Behringer is in this format.
+- dump: Memory dump that corresponds to the device's internal flash memory.
+- os:   An operating system image, that is the compiled code. This is
+        different from a memory dump in that the memory dump contains an
+        obfuscated os image, preceeded by a length and a checksum.
+The most commonly used formats will be syx and os, the former to upload a
+program to the device and the latter as the binary output of the linker.
+
+
+** bcfwflash.py
+
+Uploads a midi firmware image to the device and displays feedback on its
+progress. By default it scans each midi device for an attached Behringer
+Control device and connects to the first found.
+
+This utility has only been tested on Linux and will probably not work on
+non-unix-like systems as it needs a device file to read and write from.
+
+
+** Examples
+
+Convert an existing midi firmware file to an operating system image
+  $ bcfwconvert -i bcf2000_1-07.syx -I syx -o bcf2000_1-07.bin -O os
+
+Compile an assembly program and generate a sysex file to program the device
+  $ arm-as -o test.elf test.S
+  $ arm-objcopy -O binary test.elf test.bin
+  $ bcfwconvert -i test.bin -I os -o test.syx -O syx
+
+Detect attached Behringer Control devices (BCF2000 attached via USB)
+  $ bcfwflash -l
+  /dev/snd/midiC1D0:	BCF2000 1.10
+
+Upload a midi firmware file to the first detected device
+  $ bcfwflash -u -i bcf2000_1-07.syx
+
+Flash an operating system image directly to the specified midi port
+  $ bcfwconvert -i test.bin -I os -O syx | bcfwflash -u -d /dev/midi0
+
+Display the string "ABBA" on the device's display
+  $ bcfwflash -p ABBA
+
+
+** Authors
+
+Willem van Engen <dev-bc2000@willem.engen.nl>
+

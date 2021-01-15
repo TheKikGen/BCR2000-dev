@@ -1,0 +1,115 @@
+Sharing annotated disassembler listings without infringing on copyright
+-----------------------------------------------------------------------
+
+
+Analysis of disassembler listings for reverse engineering can take a
+considerable effort. It's useful to share these annotated listings with one
+another, so that one can continue where another left off. Usually the copyright
+of the code lays not with those who analyse it, so distributing the
+disassembler listings may not be permitted.
+
+To enable working together, a tool is provided to extract annotations from a
+disassembler listing and another to combine that output with the original
+binary file to produce the original annotated disassembly.
+
+  diss2da.py    Takes a disassembly as input, outputs annotations only
+
+  da2diss.py    Takes annotations and binary file as input, outputs an
+                annotated disassembly mostly equal to the original one.
+
+These tools were hacked together to enable working together on the analysis of
+the Behringer Control bootloader. I've tested it only with this, so there must
+be quite some bugs.
+
+
+** Getting the disassembly
+
+Most people will probably want to obtain the disassembly first. This requires a
+disassembler annotation file (.da) and the original binary under investigation.
+For the Behringer Control's bootloader the annotation file is provided. You
+need to obtain the bootloader binary from your device yourself:
+
+  $ ../bcfwflash.py -g -s 0-0x2000 | \
+       ../bcfwconvert.py -I syx -O dump -o bootloader.bin
+
+Now you can merge these into in an annotated disassembly dump by running
+
+  $ ./da2diss.py -i bootloader_bcf.da bootloader_bcf.bin >bootloader_bcf.diss
+
+
+** Creating an initial disassembly
+
+Let's take again the bootloader as an example. At first there's just the binary
+file obtained from the device. An initial disassembler listing is made:
+
+  $ objdump -b binary -m armv5 -D bootloader.bin >bootloader.diss
+  $ objdump -b binary -m armv5 -D --disassembler-options=force-thumb \
+                                         bootloader.bin >bootloader-thumb.diss
+
+Since the bootloader uses both the arm and thumb instructions, both versions of
+the disassembler are required. Since the processor starts in arm mode, that's
+where the analysis begins. When a thumb routine is called, you copy that from
+the other file and place between lines containing '.thumb' and '.arm'. You add
+comments prepended by ';'. You remove the disassembled mnemonics from lines
+that are used as data only. Slowly the exact purpose and method of the code
+begins to take shape in your mind, which is reflected in the comments that
+become more and more comprehensive and coherent.
+
+You may need to install multiarch binutils to be able to disassemble programs
+for the arm architecture.
+
+
+** Usage of these sharing tools
+
+Then it's time to share the effort with others. Run diss2da.py to create a file
+that contains annotations only. In this file comments are stored by their
+address. If you have removed mnemonics from an address and left the hex words,
+the address is annotated as being data; ascii strings are annotated as such. No
+actual bytes and words are stored, but only what kind of data is at what
+location.
+
+  $ ./diss2da.py -i bootloader.diss -o bootloader.da
+
+To make sure that all your annotations have indeed been processed correctly it
+is strongly advised to check what someone who wants to look at your annotated
+disassembly would see after converting it back.
+
+  $ ./da2diss.py -i bootloader.da bootloader.bin >test.diss
+  $ diff -b -u bootloader.diss test.diss
+
+Look at the differences. There may be a couple of minor ones, but if there are
+important changes, please check that you've followed the assumptions of diss2da
+(see below). If not, you may want to share the diff too if that's managable. Or
+fix these programs, if you like :) (I'll happily update them.)
+
+
+** Assumptions; or how to write annotations that'll last
+
+diss2da.py does not have very complex heuristics to detect what is meant.
+Adhere to the following, and the annotation output should be correct and
+complete.
+
+  * Always start a comment with ';' (on empty lines as well as others).
+
+  * When switching from thumb to arm mode, enter '.thumb' on an empty line.
+    Use '.arm' on an otherwise empty line to switch from arm to thumb mode.
+    The default mode is arm.
+
+  * Data is recognised by a sequence of bytes, shorts or words without a
+	mnemonic. You must use the full width of a datatype, so a byte takes two
+	digits, a short four and a word eight. So "0" is illegal, and "00a2" is
+    always seen as a short.
+    - Use whitespace or comma's to separate multiple items on a line.
+    - Don't mix different datatypes on a single line
+    - Multiple items can be expressed by '*x', so "00*3" = "00 00 00"
+
+  * String data is a sequence of characters enclosed in single (') or
+    double (") quotes.
+
+  * Always keep the address followed by a colon for both instructions and
+    data. Don't remove the shorts/words present on a line with mnemonics.
+
+  * If you need to change the offset of the disassembly, use the '.rebase'
+    command. It has a single argument specifying a file offset that should
+    be taken as address zero. This feature will probably be used seldom.
+
