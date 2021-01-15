@@ -3,6 +3,8 @@
 Unofficial Behringer Development Kit - Custom firmware
 ------------------------------------------------------
 
+Original web site : https://willem.engen.nl/projects/bc2000-dev/
+
 This file should help you get going to developing your own software for the
 Behring Control devices. While not everything is known about how the devices
 work internally, it is currently possible to put something on the display,
@@ -17,7 +19,7 @@ sure to have a .syx file containing the official firmware from Behringer for
 your model.
 
 
-** The boot sequence
+## The boot sequence
 
 At power up, the ARM processor starts executing instructions at address zero.
 It then jumps to the pre-bootloader stage that sets up the DRAM timings so that
@@ -32,7 +34,7 @@ problem with the operating system image, it goes into bootloader rescue mode
 and waits for a new operating system image to be uploaded via midi.
 
 
-** Interrupt handling
+## Interrupt handling
 
 When an interrupt occurs, the processor jumps to address 0x18, which is in
 flash memory. Depending on whether the operating system is loaded, it either
@@ -43,7 +45,7 @@ is used. This bit is set just before the bootloader hands over control to the
 operating system.
 
 
-** Calling bootloader functions
+## Calling bootloader functions
 
 The bootloader contains code to put something on the display, send and receive
 midi, and read out keys. Instead of first having create code that does these
@@ -57,7 +59,7 @@ appears to expect the led number register r0 and the desired led status in r1
 will be used in the following example.
 
 
-** A basic example in assembly
+## A basic example in assembly
 
 To get an idea of what's needed to create your own firmware image, we'll go
 through a basic example that turns on a led on the device. If you just want to
@@ -89,7 +91,7 @@ Create an assembly file, save it e.g. in test.S:
          mov   lr, pc
          blx   r5
          @ wait forever
-   hang: b     hang
+         hang: b     hang
 
 If this looks incomprehensible to you, don't worry. You can code C too, but
 there's too much happening behind the scenes with that to be instructive.
@@ -109,12 +111,12 @@ return execution proceeds a branch to itself, so it hangs.
 
 Now you can assemble ("compile") this file by the command:
 
-   arm-eabi-as -o test.o test.S
+        arm-eabi-as -o test.o test.S
 
 which creates the object file test.o, which contains machine code and symbol
 information. To extract the raw binary firmware image, this command is used
 
-   arm-eabi-objcopy -O binary test.o test.bin
+        arm-eabi-objcopy -O binary test.o test.bin
 
 When test.bin is loaded into the device's memory at 0x02000000 and executed, it
 would do just what we wanted. Now to get there, it must first be converted to a
@@ -122,7 +124,7 @@ series of midi messages that the device understands. That's were bcfwconvert.py
 comes in that's provided in this package. Assuming you're in the directory
 where that program is, you can run
 
-  ./bcfwconvert.py -i test.bin -I os -o test.syx -O syx
+       ./bcfwconvert.py -i test.bin -I os -o test.syx -O syx
 
 and there's test.syx to be sent to the device. Then you can use bcfwflash.py to
 upload the file to the device (though on Windows and Mac OS this probably
@@ -132,7 +134,7 @@ device, so that you can restore the original firmware back. The device's USB
 connection doesn't work in rescue mode!  So if you dare proceed, you can flash
 it using:
 
-  ./bcfwflash.py -i test.syx
+       ./bcfwflash.py -i test.syx
 
 It is assumed that you have setup your device correctly so that you can
 communicate between the device and your computer.
@@ -142,7 +144,7 @@ really turns off), and turn it back on. You should see the led of the exit
 button turn on!
 
 
-** The bootloader's rescue mode
+## The bootloader's rescue mode
 
 When you want to upload new firmware to the device (or possibly the original
 firmware in case you want to start actually using it again), you can always use
@@ -161,7 +163,7 @@ can not be held responsible for bricked devices. That's the small risk in
 playing with this.
 
 
-** Supplied examples
+## Supplied examples
 
 Some example firmware codes in C can be found in the firmware/ directory,
 including the beginnings of a code library for this device in firmware/shared.
@@ -188,7 +190,7 @@ ourselves. The only downside is less available memory and the longer time
 needed to program the device.
 
 
-** Coding in C
+## Coding in C
 
 While assembly keeps one close to the hardware, it is a little cumbersome for
 creating larger programs. And while you may not be fluent in assembly, chances
@@ -206,7 +208,7 @@ defined though, that will be used instead (this is taken care of by the linker
 script).
 
 
-** Bring it on!
+## Bring it on!
 
 I hope you've enjoyed this rather long explanation. If something's unclear,
 feel free to mail. And if you make something cool or useful, please think of
@@ -216,7 +218,10 @@ might possibly include you. Happy hacking.
 
 
 [1] https://launchpad.net/~bc2000-dev/+archive/ppa
+
 [2] http://www.gnuarm.com/
+
 [3] http://www.cygwin.com/
+
 [4] "B-Control MIDI Implementation", http://mntn-utils.110mb.com/
 
